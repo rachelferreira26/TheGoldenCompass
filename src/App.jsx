@@ -502,20 +502,6 @@ function Dashboard({ products, cats, onNavigate, onViewProduct }) {
             <div style={{ fontSize:28,fontWeight:900 }}>${(totalMonthly*12).toFixed(2)}</div>
           </div>
         </div>
-        {withData.length > 0 && (
-          <div style={{ borderTop:'1px solid rgba(255,255,255,.2)',paddingTop:12,display:'flex',flexDirection:'column',gap:6 }}>
-            {products.filter(p => averageDays(p.periods)).slice(0,3).map(p => {
-              const avg = averageDays(p.periods)
-              return (
-                <div key={p.id} style={{ display:'flex',justifyContent:'space-between',fontSize:13,opacity:.9 }}>
-                  <span>{p.brand ? `${p.brand} ${p.name}` : p.name}</span>
-                  <span style={{ fontWeight:700 }}>{fmtFrequency(avg)}</span>
-                </div>
-              )
-            })}
-            {withData.length > 3 && <div style={{ fontSize:12,opacity:.6,textAlign:'center' }}>+{withData.length - 3} more</div>}
-          </div>
-        )}
       </div>
 
       {/* Quick stats */}
@@ -572,8 +558,8 @@ function Dashboard({ products, cats, onNavigate, onViewProduct }) {
                     <div style={{ fontSize:12,color:'var(--muted)' }}>{cat?.name || 'Uncategorized'}</div>
                   </div>
                   <div style={{ textAlign:'right' }}>
-                    <div style={{ fontWeight:700,color:'var(--primary)',fontSize:15 }}>{fmtDuration(avg)}</div>
-                    <div style={{ fontSize:11,color:'var(--muted)' }}>avg life</div>
+                    <div style={{ fontWeight:700,color:'var(--primary)',fontSize:14 }}>{fmtFrequency(avg)}</div>
+                    <div style={{ fontSize:11,color:'var(--muted)',marginTop:2 }}>{avg != null ? `${avg} days` : '—'}</div>
                   </div>
                 </div>
               )
