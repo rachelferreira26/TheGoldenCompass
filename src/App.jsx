@@ -32,6 +32,17 @@ const monthlyFromDays = (price, days) => {
   if (!price || !days) return null
   return ((price / days) * 30).toFixed(2)
 }
+const fmtFrequency = (days) => {
+  if (days == null) return '—'
+  if (days < 7)   return `Every ${days}d`
+  if (days < 30)  return `Every ${Math.round(days / 7)}w`
+  if (days < 365) return `Every ${Math.round(days / 30)} mo`
+  return `Every ${(days / 365).toFixed(1)} yr`
+}
+const purchasesPerYear = (days) => {
+  if (!days) return null
+  return (365 / days).toFixed(1)
+}
 
 // ── Icons (SVG inline) ───────────────────────────────────────────────────────
 const CATEGORY_ICONS = {
@@ -173,6 +184,7 @@ function CategoriesScreen({ cats, setCats }) {
 // ── PRODUCT FORM ─────────────────────────────────────────────────────────────
 function ProductForm({ cats, editing, onSave, onClose }) {
   const [name, setName]       = useState(editing?.name || '')
+  const [brand, setBrand]     = useState(editing?.brand || '')
   const [catId, setCatId]     = useState(editing?.categoryId || '')
   const [price, setPrice]     = useState(editing?.price ?? '')
   const [notes, setNotes]     = useState(editing?.notes || '')
@@ -198,6 +210,7 @@ function ProductForm({ cats, editing, onSave, onClose }) {
     onSave({
       id: editing?.id || uuidv4(),
       name: name.trim(),
+      brand: brand.trim(),
       categoryId: catId,
       price: price !== '' ? parseFloat(price) : null,
       notes: notes.trim(),
@@ -209,7 +222,9 @@ function ProductForm({ cats, editing, onSave, onClose }) {
 
   return (
     <div>
-      <Input label="Product Name *" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Dove Body Lotion" autoFocus />
+      <Input label="Product Name *" value={name} onChange={e => setName(e.target.value)} placeholder="e.g. Body Lotion" autoFocus />
+
+      <Input label="Brand (optional)" value={brand} onChange={e => setBrand(e.target.value)} placeholder="e.g. Dove" />
 
       <div style={{ marginBottom:16 }}>
         <label style={{ display:'block',fontSize:12,fontWeight:600,color:'var(--muted)',textTransform:'uppercase',letterSpacing:'.5px',marginBottom:6 }}>Category</label>
@@ -326,7 +341,7 @@ function ProductsScreen({ products, setProducts, cats, onView }) {
                 </span>
                 <div style={{ flex:1 }}>
                   <div style={{ fontWeight:700,fontSize:16 }}>{p.name}</div>
-                  {cat && <div style={{ fontSize:13,color:'var(--muted)' }}>{cat.name}</div>}
+                  <div style={{ fontSize:13,color:'var(--muted)' }}>{[p.brand, cat?.name].filter(Boolean).join(' · ')}</div>
                 </div>
                 <div style={{ display:'flex',gap:4 }} onClick={e => e.stopPropagation()}>
                   <Btn variant='ghost' onClick={() => openEdit(p)} style={{ fontSize:13 }}>Edit</Btn>
@@ -337,7 +352,7 @@ function ProductsScreen({ products, setProducts, cats, onView }) {
               <div style={{ display:'grid',gridTemplateColumns:'repeat(4,1fr)',background:'var(--bg)',borderRadius:10,padding:'10px 0' }}>
                 {[
                   ['Avg Life', fmtDuration(avg)],
-                  ['Periods', `${done}/3`],
+                  ['Buy Every', fmtFrequency(avg)],
                   ['Price', p.price ? `$${p.price}` : '—'],
                   ['Monthly', monthly ? `$${monthly}` : '—'],
                 ].map(([label, val]) => (
@@ -384,16 +399,21 @@ function ProductDetail({ product, cats, onBack, onEdit }) {
         </span>
         <div>
           <div style={{ fontSize:20,fontWeight:700 }}>{product.name}</div>
-          {cat && <Badge>{cat.name}</Badge>}
-          {product.notes && <div style={{ fontSize:14,color:'var(--muted)',marginTop:4 }}>{product.notes}</div>}
+          <div style={{ display:'flex',gap:6,flexWrap:'wrap',marginTop:4 }}>
+            {product.brand && <Badge color='var(--primary)' bg='var(--primary-light)'>{product.brand}</Badge>}
+            {cat && <Badge>{cat.name}</Badge>}
+          </div>
+          {product.notes && <div style={{ fontSize:14,color:'var(--muted)',marginTop:6 }}>{product.notes}</div>}
         </div>
       </div>
 
       {/* Stats */}
       <h2 style={{ fontSize:16,fontWeight:700,marginBottom:12 }}>Budget Insights</h2>
-      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:10,marginBottom:24 }}>
+      <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr 1fr',gap:10,marginBottom:24 }}>
         {[
           ['Avg Lifespan', fmtDuration(avg)],
+          ['Buy Frequency', fmtFrequency(avg)],
+          ['Per Year', avg ? `${purchasesPerYear(avg)}×` : '—'],
           ['Unit Price', product.price ? `$${product.price}` : '—'],
           ['Monthly Cost', monthly ? `$${monthly}` : '—'],
           ['Yearly Cost', yearly ? `$${yearly}` : '—'],
@@ -470,10 +490,32 @@ function Dashboard({ products, cats, onNavigate, onViewProduct }) {
       <h1 style={{ fontSize:26,fontWeight:800,marginBottom:20 }}>Dashboard</h1>
 
       {/* Hero */}
-      <div style={{ background:'var(--primary)',borderRadius:20,padding:'28px 24px',marginBottom:16,textAlign:'center',color:'#fff' }}>
-        <div style={{ fontSize:13,opacity:.75,marginBottom:6 }}>Estimated Monthly Spend</div>
-        <div style={{ fontSize:52,fontWeight:900,lineHeight:1 }}>${totalMonthly.toFixed(2)}</div>
-        <div style={{ fontSize:13,opacity:.75,marginTop:8 }}>${(totalMonthly*12).toFixed(2)} / year · {withData.length} tracked products</div>
+      <div style={{ background:'var(--primary)',borderRadius:20,padding:'28px 24px',marginBottom:16,color:'#fff' }}>
+        <div style={{ fontSize:13,opacity:.75,marginBottom:12,textAlign:'center' }}>Purchase Overview</div>
+        <div style={{ display:'grid',gridTemplateColumns:'1fr 1fr',gap:12,marginBottom:12 }}>
+          <div style={{ textAlign:'center' }}>
+            <div style={{ fontSize:11,opacity:.75,marginBottom:4 }}>Monthly Spend</div>
+            <div style={{ fontSize:28,fontWeight:900 }}>${totalMonthly.toFixed(2)}</div>
+          </div>
+          <div style={{ textAlign:'center' }}>
+            <div style={{ fontSize:11,opacity:.75,marginBottom:4 }}>Yearly Spend</div>
+            <div style={{ fontSize:28,fontWeight:900 }}>${(totalMonthly*12).toFixed(2)}</div>
+          </div>
+        </div>
+        {withData.length > 0 && (
+          <div style={{ borderTop:'1px solid rgba(255,255,255,.2)',paddingTop:12,display:'flex',flexDirection:'column',gap:6 }}>
+            {products.filter(p => averageDays(p.periods)).slice(0,3).map(p => {
+              const avg = averageDays(p.periods)
+              return (
+                <div key={p.id} style={{ display:'flex',justifyContent:'space-between',fontSize:13,opacity:.9 }}>
+                  <span>{p.brand ? `${p.brand} ${p.name}` : p.name}</span>
+                  <span style={{ fontWeight:700 }}>{fmtFrequency(avg)}</span>
+                </div>
+              )
+            })}
+            {withData.length > 3 && <div style={{ fontSize:12,opacity:.6,textAlign:'center' }}>+{withData.length - 3} more</div>}
+          </div>
+        )}
       </div>
 
       {/* Quick stats */}
